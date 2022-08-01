@@ -7,13 +7,12 @@ use crate::io::Result;
 
 pub mod cache;
 pub mod cow;
-#[cfg(test)]
 pub mod one;
 
 pub trait BlockDevice {
     fn block_size(&self) -> usize;
     fn block_count(&self) -> usize;
-    fn read_block(&self, block: u64, buf: &mut dyn AsMut<[u8]>) -> io::Result<usize>;
+    fn read_block(&self, block: u64, buf: &mut dyn AsMut<[u8]>) -> Result<usize>;
     fn write_block(&mut self, block: u64, buf: &dyn AsRef<[u8]>) -> Result<usize>;
 }
 

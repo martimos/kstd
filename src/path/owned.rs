@@ -7,6 +7,9 @@ use core::fmt::{Display, Formatter};
 use crate::path::components::{Component, Components};
 use crate::path::{Path, SEPARATOR};
 
+/// OwnedPath is the equivalent of PathBuf in the normal std library.
+/// It is a path whose inner representation is a [`String`].
+/// The path can be modified by adding other paths using the [`OwnedPath::push`] method.
 #[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
 pub struct OwnedPath {
     inner: String,
@@ -33,12 +36,43 @@ impl Default for OwnedPath {
 }
 
 impl OwnedPath {
+    /// Creates a new, empty owned path.
     pub fn new() -> Self {
         Self {
             inner: String::new(),
         }
     }
 
+    /// Appends another path to the end of this path.
+    /// If the other path is absolute, but this path is not empty,
+    /// then the path will be appended as a relative path.
+    ///
+    /// ```rust
+    /// use kstd::path::owned::OwnedPath;
+    /// let mut path = OwnedPath::from("foo");
+    /// path.push("/bar");
+    /// assert_eq!(path.to_string(), "foo/bar");
+    /// ```
+    ///
+    /// Pushing a parent directory will remove the last component of the path:
+    /// ```rust
+    /// use kstd::path::owned::OwnedPath;
+    /// let mut path = OwnedPath::from("foo/bar");
+    /// path.push("..");
+    /// assert_eq!(path.to_string(), "foo");
+    /// ```
+    ///
+    /// Pushing a root dir is a no-op if the path is not empty, otherwise it will
+    /// make this path absolute.
+    /// ```rust
+    /// use kstd::path::owned::OwnedPath;
+    /// let mut path = OwnedPath::new();
+    /// path.push("/");
+    /// path.push("foo");
+    /// assert_eq!(path.to_string(), "/foo");
+    /// ```
+    ///
+    /// Pushing a current dir is always a no-op and will not modify the path in any way.
     pub fn push<P: AsRef<Path>>(&mut self, segment: P) {
         let path = segment.as_ref();
 
@@ -70,6 +104,13 @@ impl OwnedPath {
         });
     }
 
+    /// Converts the path into its components.
+    ///
+    /// ```rust
+    /// use kstd::path::owned::OwnedPath;
+    /// let mut my_root = OwnedPath::from("/my/path");
+    /// assert_eq!(vec![OwnedPath::from("my"), OwnedPath::from("path")], my_root.into_components());
+    /// ```
     pub fn into_components(self) -> Vec<OwnedPath> {
         let mut data: Vec<OwnedPath> = Vec::new();
 

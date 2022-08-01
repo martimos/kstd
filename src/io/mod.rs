@@ -51,6 +51,9 @@ pub enum Error {
 }
 
 pub trait ReadAt<T> {
+    /// Reads from this source at the specified offset and places the result in [`buf`].
+    /// This method does not guarantee to read [`buf`] fully. If that is your requirement,
+    /// create a [`Cursor`] and use [`Read::read_exact`].
     fn read_at(&self, offset: u64, buf: &mut dyn AsMut<[T]>) -> Result<usize>;
 }
 
@@ -61,7 +64,14 @@ where
     fn read_at(&self, offset: u64, buf: &mut dyn AsMut<[T]>) -> Result<usize> {
         let buffer = buf.as_mut();
 
-        buffer.copy_from_slice(&self[offset as usize..offset as usize + buffer.len()]);
+        let start = offset as usize;
+        let end = start + buffer.len();
+        if end > self.len() {
+            // if `end` is within bounds, start is within bounds, too
+            return Err(Error::InvalidOffset);
+        }
+
+        buffer.copy_from_slice(&self[start..end]);
         Ok(buffer.len())
     }
 }
