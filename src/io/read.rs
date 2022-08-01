@@ -28,9 +28,7 @@ pub trait Read<T> {
 macro_rules! read_bytes {
     ($source:expr, $count:expr) => {{
         let mut buf = [0_u8; $count];
-        $source
-            .read_exact(&mut buf)
-            .or(Err($crate::syscall::error::Errno::EIO))?;
+        $source.read_exact(&mut buf)?;
         buf
     }};
 }
