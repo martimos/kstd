@@ -71,8 +71,8 @@ impl<V> Drop for LruCache<V> {
 #[cfg(test)]
 mod tests {
     use crate::collections::VecDeque;
-    use crate::sync::Arc;
     use crate::sync::atomic::{AtomicUsize, Ordering};
+    use crate::sync::Arc;
 
     use super::LruCache;
 
