@@ -44,9 +44,9 @@ pub enum Error {
     IncoherentData,
     /// The provided argument was invalid.
     InvalidArgument,
-    /// The found entry is not a file.
+    /// The found entry is a file.
     IsFile,
-    /// The found entry is not a directory.
+    /// The found entry is a directory.
     IsDir,
 }
 
