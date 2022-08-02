@@ -8,10 +8,20 @@ pub mod cache;
 pub mod cow;
 pub mod one;
 
+/// Describes a device that stores data in blocks of a fixed size.
 pub trait BlockDevice {
+    /// The size of a block on this device.
+    /// The result is constant, meaning that it does not change.
     fn block_size(&self) -> usize;
+    /// The number of blocks on this device.
     fn block_count(&self) -> usize;
+    /// Read the block with the given block number from this device into the given buffer.
+    /// The buffer must be at least as large as the [`BlockDevice::block_size`].
+    /// Failing to provide such a buffer will result in an [`Error::BufferTooSmall`].
     fn read_block(&self, block: u64, buf: &mut dyn AsMut<[u8]>) -> Result<usize>;
+    /// Write the given buffer to the block with the given block number on this device.
+    /// The buffer must be at least as large as the [`BlockDevice::block_size`].
+    /// Failing to provide such a buffer will result in an [`Error::BufferTooSmall`].
     fn write_block(&mut self, block: u64, buf: &dyn AsRef<[u8]>) -> Result<usize>;
 }
 

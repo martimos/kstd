@@ -2,6 +2,30 @@ use alloc::collections::VecDeque;
 use core::fmt::Debug;
 use core::ops::{Index, IndexMut};
 
+/// A queue where every node has a numeric weight.
+/// Nodes are stored in the queue sorted by their weight.
+/// The weight within the queue is the difference to the weight of the previous node.
+///
+/// # Example
+/// Take a queue with three nodes, weight 1, 2 and 3.
+/// When we insert the first node, the queue looks as follows.
+///
+/// `[1]`
+///
+/// When we insert the second node, the weight is higher than all nodes in the queue,
+/// so it's stored as the last element. The node with which he is stored is the difference
+/// from its original weight to the weight of the previous node. The queue looks as follows.
+///
+/// `[1 (first node), 1 (second node)]`
+///
+/// Same thing goes for the third node.
+///
+/// `[1 (first node), 1 (second node), 1 (third node)]`
+///
+/// No matter the order of insertion, in the end, the queue is always sorted like this.
+/// With this insert algorithm, the amount of weight of nodes from the front of the queue to
+/// a specific node, is the original weight of that specific node. In the above example, the amount
+/// of weights until the third node is 3 (1 + 1 + 1), which is the original weight.
 #[derive(Debug, Eq, PartialEq)]
 pub struct DeltaQueue<T> {
     data: VecDeque<Node<T>>,
