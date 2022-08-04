@@ -65,7 +65,7 @@ where
 mod tests {
     use alloc::vec;
 
-    use crate::io::device::block::BlockDevice;
+    use crate::io::block::BlockDevice;
     use crate::io::ReadAt;
     use crate::io::Result;
 

@@ -3,10 +3,13 @@ use derive_more::Display;
 
 pub use read::*;
 
+pub mod block;
 pub mod cursor;
-pub mod device;
+pub mod macros;
 pub mod read;
+pub mod seek;
 pub mod testing;
+pub mod write;
 
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 

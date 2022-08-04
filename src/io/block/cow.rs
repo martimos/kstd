@@ -4,7 +4,7 @@ use alloc::rc::Rc;
 use crate::sync::Mutex;
 use crate::sync::RwLock;
 
-use crate::io::device::block::BlockDevice;
+use crate::io::block::BlockDevice;
 use crate::io::{Error, Result};
 
 #[derive(Clone)]

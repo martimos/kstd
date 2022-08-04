@@ -5,10 +5,10 @@ use alloc::vec::Vec;
 use spin::{Mutex, RwLock};
 
 use crate::collections::lru::LruCache;
-use crate::io::device::block::BlockDevice;
+use crate::io::block::BlockDevice;
 use crate::io::{Error, Result};
 
-struct Block<D>
+struct CacheBlock<D>
 where
     D: BlockDevice,
 {
@@ -17,7 +17,7 @@ where
     data: Vec<u8>,
 }
 
-impl<D> Drop for Block<D>
+impl<D> Drop for CacheBlock<D>
 where
     D: BlockDevice,
 {
@@ -31,7 +31,7 @@ pub struct BlockCache<D>
 where
     D: BlockDevice,
 {
-    cache: Mutex<LruCache<Rc<RwLock<Block<D>>>>>,
+    cache: Mutex<LruCache<Rc<RwLock<CacheBlock<D>>>>>,
     block_size: usize,
     device: Rc<RwLock<D>>,
 }
@@ -76,7 +76,7 @@ where
                 let mut data = vec![0_u8; self.block_size];
                 let _ = self.device.read().read_block(block, &mut data)?;
 
-                let b = Rc::new(RwLock::new(Block {
+                let b = Rc::new(RwLock::new(CacheBlock {
                     device: self.device.clone(),
                     num: block,
                     data,
@@ -100,9 +100,9 @@ mod tests {
     use alloc::vec;
     use core::sync::atomic::Ordering;
 
-    use crate::io::device::block::cache::BlockCache;
-    use crate::io::device::block::one::OneDevice;
-    use crate::io::device::block::BlockDevice;
+    use crate::io::block::cache::BlockCache;
+    use crate::io::block::one::OneDevice;
+    use crate::io::block::BlockDevice;
 
     #[test]
     fn test_cache_read() {

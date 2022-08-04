@@ -1,6 +1,6 @@
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use crate::io::device::block::BlockDevice;
+use crate::io::block::BlockDevice;
 use crate::io::Result;
 
 pub struct OneDevice {
