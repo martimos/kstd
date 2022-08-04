@@ -1,4 +1,3 @@
-use alloc::vec::Vec;
 use derive_more::Display;
 
 pub use read::*;
@@ -47,47 +46,13 @@ pub enum Error {
     IncoherentData,
     /// The provided argument was invalid.
     InvalidArgument,
-    /// The found entry is a file.
+    /// The found entry is a file, but shouldn't be.
     IsFile,
-    /// The found entry is a directory.
+    /// The found entry is a directory, but shouldn't be.
     IsDir,
-}
-
-pub trait ReadAt<T> {
-    /// Reads from this source at the specified offset and places the result in [`buf`].
-    /// This method does not guarantee to read [`buf`] fully. If that is your requirement,
-    /// create a [`Cursor`] and use [`Read::read_exact`].
-    fn read_at(&self, offset: u64, buf: &mut dyn AsMut<[T]>) -> Result<usize>;
-}
-
-impl<T> ReadAt<T> for &Vec<T>
-where
-    T: Copy,
-{
-    fn read_at(&self, offset: u64, buf: &mut dyn AsMut<[T]>) -> Result<usize> {
-        let buffer = buf.as_mut();
-
-        let start = offset as usize;
-        let end = start + buffer.len();
-        if end > self.len() {
-            // if `end` is within bounds, start is within bounds, too
-            return Err(Error::InvalidOffset);
-        }
-
-        buffer.copy_from_slice(&self[start..end]);
-        Ok(buffer.len())
-    }
-}
-
-impl<T> ReadAt<T> for Vec<T>
-where
-    T: Copy,
-{
-    fn read_at(&self, offset: u64, buf: &mut dyn AsMut<[T]>) -> Result<usize> {
-        ReadAt::<T>::read_at(&self, offset, buf)
-    }
-}
-
-pub trait WriteAt<T> {
-    fn write_at(&mut self, offset: u64, buf: &dyn AsRef<[T]>) -> Result<usize>;
+    /// The found entry is a symbolic link, but shouldn't be.
+    IsSymLink,
+    /// An unexpected error occurred during the write, or the write
+    /// couldn't be completed.
+    WriteError,
 }
