@@ -10,6 +10,10 @@ pub mod seek;
 pub mod testing;
 pub mod write;
 
+pub use crate::io::read::*;
+pub use crate::io::seek::*;
+pub use crate::io::write::*;
+
 pub type Result<T, E = Error> = core::result::Result<T, E>;
 
 #[derive(Display, Debug, Copy, Clone, Eq, PartialEq)]
