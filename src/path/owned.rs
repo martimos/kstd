@@ -1,4 +1,3 @@
-use alloc::borrow::ToOwned;
 use alloc::string::String;
 use alloc::vec::Vec;
 use core::borrow::Borrow;
@@ -43,6 +42,10 @@ impl OwnedPath {
         }
     }
 
+    pub fn as_path(&self) -> &Path {
+        Path::new(&self.inner)
+    }
+
     /// Appends another path to the end of this path.
     /// If the other path is absolute, but this path is not empty,
     /// then the path will be appended as a relative path.
@@ -54,12 +57,12 @@ impl OwnedPath {
     /// assert_eq!(path.to_string(), "foo/bar");
     /// ```
     ///
-    /// Pushing a parent directory will remove the last component of the path:
+    /// Pushing a parent directory will not remove the last component of the path:
     /// ```rust
     /// use kstd::path::owned::OwnedPath;
     /// let mut path = OwnedPath::from("foo/bar");
     /// path.push("..");
-    /// assert_eq!(path.to_string(), "foo");
+    /// assert_eq!(path.to_string(), "foo/bar/..");
     /// ```
     ///
     /// Pushing a root dir is a no-op if the path is not empty, otherwise it will
@@ -83,16 +86,9 @@ impl OwnedPath {
             }
 
             match c {
-                Component::CurrentDir => { /* do nothing here */ }
+                Component::CurrentDir => self.inner.push('.'),
                 Component::ParentDir => {
-                    if let Some(index) = self
-                        .inner
-                        .trim_end_matches(SEPARATOR) // we may already have pushed a SEPARATOR
-                        .rfind(SEPARATOR)
-                    {
-                        let (left, _) = self.inner.split_at(index);
-                        self.inner = left.to_owned();
-                    }
+                    self.inner.push_str("..");
                 }
                 Component::Normal(s) => self.inner.push_str(s),
                 Component::RootDir => {
@@ -160,6 +156,55 @@ mod tests {
     use alloc::vec;
 
     use super::*;
+
+    #[test]
+    fn test_push_parent_at_beginning() {
+        let mut p = OwnedPath::new();
+        p.push("..");
+        p.push("foo");
+        assert_eq!("../foo", p.to_string());
+    }
+
+    #[test]
+    fn test_multiple_parents_at_beginning() {
+        let mut p = OwnedPath::new();
+        p.push("..");
+        p.push("..");
+        p.push("..");
+        p.push("foo");
+        assert_eq!("../../../foo", p.to_string());
+    }
+
+    #[test]
+    fn test_push_multiple_parents() {
+        let mut p = OwnedPath::new();
+        p.push("foo");
+        p.push("..");
+        p.push("..");
+        p.push("bar");
+        assert_eq!("foo/../../bar", p.to_string());
+    }
+
+    #[test]
+    fn test_push_multiple_parents_with_current_dir() {
+        let mut p = OwnedPath::new();
+        p.push("foo");
+        p.push("..");
+        p.push(".");
+        p.push("..");
+        p.push("bar");
+        assert_eq!("foo/.././../bar", p.to_string());
+    }
+
+    #[test]
+    fn test_push_multiple_parents_absolute() {
+        let mut p = OwnedPath::new();
+        p.push("/foo");
+        p.push("..");
+        p.push("..");
+        p.push("bar");
+        assert_eq!("/foo/../../bar", p.to_string());
+    }
 
     #[test]
     fn test_push_trivial() {

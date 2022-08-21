@@ -1,4 +1,5 @@
 use alloc::borrow::ToOwned;
+use alloc::string::String;
 use components::Components;
 use core::fmt::{Display, Formatter};
 use core::ops::Deref;
@@ -56,6 +57,12 @@ impl AsRef<Path> for Path {
 }
 
 impl AsRef<Path> for str {
+    fn as_ref(&self) -> &Path {
+        Path::new(self)
+    }
+}
+
+impl AsRef<Path> for String {
     fn as_ref(&self) -> &Path {
         Path::new(self)
     }
