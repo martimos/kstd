@@ -7,7 +7,6 @@ pub mod cursor;
 pub mod macros;
 pub mod read;
 pub mod seek;
-pub mod testing;
 pub mod write;
 
 pub use crate::io::read::*;
