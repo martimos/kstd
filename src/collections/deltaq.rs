@@ -62,7 +62,9 @@ impl<T> DeltaQueue<T> {
         }
     }
 
-    pub fn insert(&mut self, value: usize, elem: T) {
+    /// Inserts the given element with the given value into this queue.
+    /// Returns a reference to the inserted element.
+    pub fn insert(&mut self, value: usize, elem: T) -> &mut T {
         let mut total_value = 0;
 
         for i in 0..self.data.len() {
@@ -77,12 +79,13 @@ impl<T> DeltaQueue<T> {
                     // if there is a next element, adapt its value
                     self.data[i + 1].value -= node_value;
                 }
-                return;
+                return &mut self.data[i].elem;
             }
 
             total_value += found.value;
         }
         self.data.push_back(Node::new(value - total_value, elem));
+        &mut self.data.back_mut().unwrap().elem
     }
 
     pub fn front(&self) -> Option<&Node<T>> {
