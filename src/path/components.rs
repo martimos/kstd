@@ -164,7 +164,7 @@ impl<'a> Iterator for Components<'a> {
                 State::Done => None,
             };
         }
-        return None;
+        None
     }
 }
 
@@ -191,7 +191,7 @@ impl<'a> DoubleEndedIterator for Components<'a> {
                 State::Done => None,
             };
         }
-        return None;
+        None
     }
 }
 
