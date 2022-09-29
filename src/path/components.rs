@@ -1,22 +1,67 @@
 use crate::path::{Path, SEPARATOR};
-use alloc::vec::Vec;
+use core::iter::FusedIterator;
 
+#[derive(Clone)]
 pub struct Components<'a> {
-    fragments: Vec<&'a str>,
-    seen_root: bool,
-    absolute: bool,
-    index: usize,
+    path: &'a str,
+    state_front: State,
+    state_back: State,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum State {
+    StartDir,
+    Body,
+    Done,
 }
 
 impl<'a> Components<'a> {
     pub fn new(path: &'a Path) -> Self {
-        let absolute = path.starts_with(SEPARATOR);
         Components {
-            fragments: path.split(SEPARATOR).collect(),
-            seen_root: false,
-            absolute,
-            index: 0,
+            path: &path.inner,
+            state_front: if path.starts_with(SEPARATOR) {
+                State::StartDir
+            } else {
+                State::Body
+            },
+            state_back: State::Body,
         }
+    }
+
+    pub fn as_path(&self) -> &'a Path {
+        self.path.into()
+    }
+
+    fn next_component_front(&mut self) -> (usize, Option<Component<'a>>) {
+        debug_assert_eq!(State::Body, self.state_front);
+        if self.path.is_empty() {
+            return (0, None); // nothing more to parse
+        }
+
+        let (extra, component) = match self
+            .path
+            .as_bytes()
+            .iter()
+            .position(|&b| b as char == SEPARATOR)
+        {
+            None => (0, self.path),
+            Some(i) => (1, &self.path[..i]),
+        };
+        (component.len() + extra, Some(component.into()))
+    }
+
+    fn next_component_back(&mut self) -> (usize, Option<Component<'a>>) {
+        debug_assert_eq!(State::Body, self.state_back);
+        let (extra, component) = match self
+            .path
+            .as_bytes()
+            .iter()
+            .rposition(|&b| b as char == SEPARATOR)
+        {
+            None => (0, self.path),
+            Some(i) => (1, &self.path[i + 1..]),
+        };
+        (component.len() + extra, Some(component.into()))
     }
 }
 
@@ -80,31 +125,73 @@ pub enum Component<'a> {
     Normal(&'a str),
 }
 
+impl<'a> From<&'a str> for Component<'a> {
+    fn from(s: &'a str) -> Self {
+        match s {
+            "." => Component::CurrentDir,
+            ".." => Component::ParentDir,
+            "/" => Component::RootDir, // '/' as a component means root dir, everything else is considered a separator and must not reach this
+            _ => Component::Normal(s),
+        }
+    }
+}
+
+impl<'a> FusedIterator for Components<'a> {}
+
 impl<'a> Iterator for Components<'a> {
     type Item = Component<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.absolute && !self.seen_root {
-            self.seen_root = true;
-            return Some(Component::RootDir);
+        'outer: while !self.path.is_empty() {
+            return match self.state_front {
+                State::StartDir => {
+                    self.state_front = State::Body;
+                    self.path = &self.path[SEPARATOR.len_utf8()..];
+                    Some(Component::RootDir)
+                }
+                State::Body => {
+                    if let (count, Some(comp)) = self.next_component_front() {
+                        self.path = &self.path[count..];
+                        if let Component::Normal("") = comp {
+                            continue 'outer; // don't return empty fragments
+                        }
+                        Some(comp)
+                    } else {
+                        self.state_front = State::Done;
+                        None
+                    }
+                }
+                State::Done => None,
+            };
         }
+        return None;
+    }
+}
 
-        let mut item = "";
-        while item.is_empty() {
-            if self.index >= self.fragments.len() {
-                return None;
-            }
-
-            // hello///world should be equivalent to hello/world, so we skip empty fragments
-            item = self.fragments[self.index];
-            self.index += 1;
+impl<'a> DoubleEndedIterator for Components<'a> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        'outer: while !self.path.is_empty() {
+            return match self.state_back {
+                State::StartDir => {
+                    self.state_back = State::Done;
+                    Some(Component::RootDir)
+                }
+                State::Body => {
+                    if let (count, Some(comp)) = self.next_component_back() {
+                        self.path = &self.path[..self.path.len() - count];
+                        if let Component::Normal("") = comp {
+                            continue 'outer; // don't return empty fragments
+                        }
+                        Some(comp)
+                    } else {
+                        self.state_back = State::Done;
+                        None
+                    }
+                }
+                State::Done => None,
+            };
         }
-
-        match item {
-            "." => Some(Component::CurrentDir),
-            ".." => Some(Component::ParentDir),
-            _ => Some(Component::Normal(item)),
-        }
+        return None;
     }
 }
 
@@ -133,10 +220,43 @@ mod tests {
 
     #[test]
     fn test_empty_fragments() {
-        let p = Path::new("hello///world");
+        let p = Path::new("hello//////world");
         let mut c = p.components();
         assert_eq!(Some(Component::Normal("hello")), c.next());
         assert_eq!(Some(Component::Normal("world")), c.next());
         assert_eq!(None, c.next());
+    }
+
+    #[test]
+    fn test_somewhat_fused() {
+        let p = Path::new("/hello");
+        let mut c = p.components();
+        assert_eq!(Some(Component::RootDir), c.next());
+        assert_eq!(Some(Component::Normal("hello")), c.next());
+        for _ in 0..100 {
+            assert_eq!(None, c.next());
+        }
+    }
+
+    #[test]
+    fn test_trailing_slash() {
+        let p = Path::new("/hello/");
+        let mut c = p.components();
+        assert_eq!(Some(Component::RootDir), c.next());
+        assert_eq!(Some(Component::Normal("hello")), c.next());
+        for _ in 0..100 {
+            assert_eq!(None, c.next());
+        }
+    }
+
+    #[test]
+    fn test_trailing_slashes() {
+        let p = Path::new("/hello/////");
+        let mut c = p.components();
+        assert_eq!(Some(Component::RootDir), c.next());
+        assert_eq!(Some(Component::Normal("hello")), c.next());
+        for _ in 0..100 {
+            assert_eq!(None, c.next());
+        }
     }
 }

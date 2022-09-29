@@ -1,3 +1,4 @@
+use crate::path::components::Component;
 use alloc::borrow::ToOwned;
 use alloc::string::String;
 use components::Components;
@@ -14,6 +15,8 @@ pub fn is_separator_char(c: char) -> bool {
     c == SEPARATOR
 }
 
+#[derive(Debug, Eq, PartialEq)]
+#[repr(transparent)]
 pub struct Path {
     inner: str,
 }
@@ -39,6 +42,28 @@ impl Path {
 
     pub fn components(&self) -> Components<'_> {
         Components::new(self)
+    }
+
+    pub fn parent(&self) -> Option<&Path> {
+        let mut components = self.components();
+        let last = components.next_back();
+        last.and_then(|p| match p {
+            Component::CurrentDir | Component::ParentDir | Component::Normal(_) => {
+                let path = components.as_path();
+                if path.is_empty() {
+                    None
+                } else {
+                    Some(path)
+                }
+            }
+            _ => None,
+        })
+    }
+}
+
+impl<'a> From<&'a str> for &'a Path {
+    fn from(v: &'a str) -> Self {
+        Path::new(v)
     }
 }
 
@@ -83,5 +108,12 @@ mod tests {
     fn test_to_owned() {
         let p = Path::new("hello/world").to_owned();
         assert_eq!("hello/world", p.to_string());
+    }
+
+    #[test]
+    fn test_parent() {
+        let p = Path::new("/hello/world");
+        assert_eq!(Some(Path::new("/hello")), p.parent());
+        assert_eq!(None, p.parent().unwrap().parent());
     }
 }
