@@ -11,4 +11,4 @@ readme = "README.md"
 
 [dependencies]
 derive_more = "0.99.17"
-spin = "0.9.4"
+spin = "0.9.8"
